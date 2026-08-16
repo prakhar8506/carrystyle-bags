@@ -30,7 +30,7 @@ export const StillHero: React.FC<StillHeroProps> = () => {
       ref={heroRef}
       id="hero"
       data-hero-cursor
-      className="relative w-full min-h-screen bg-bone overflow-hidden flex flex-col justify-between pt-20 select-none cursor-none"
+      className="relative w-full min-h-screen bg-bone flex flex-col justify-between pt-20 select-none cursor-none"
     >
       {/* Giant wordmark — sits behind the lens layer */}
       <div className="absolute inset-0 z-10 flex flex-col justify-center items-center px-2 sm:px-6 overflow-hidden pointer-events-none">

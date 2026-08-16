@@ -28,8 +28,8 @@ export const StillExpandedBag: React.FC = () => {
           ease: 'power2.out',
           scrollTrigger: {
             trigger: containerRef.current,
-            start: 'top top',
-            end: '+=100%',
+            start: 'top bottom', // Start animating as soon as the section enters the viewport
+            end: 'top top',      // Finish when it pins
             scrub: 1,
           },
         }
@@ -43,7 +43,7 @@ export const StillExpandedBag: React.FC = () => {
     <section
       id="expansion-trigger"
       ref={containerRef}
-      className="relative w-full h-screen flex items-center justify-center overflow-hidden bg-bone pointer-events-none"
+      className="relative w-full h-screen flex items-center justify-center overflow-hidden bg-transparent pointer-events-none"
     >
       {/* The background here is bone, but the expanding cursor sphere (bg-ink) from StillHero will overlay it. */}
       {/* The text needs a high z-index to sit above the expanded cursor sphere (z-[40]). */}

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { HeroBagScene } from './HeroBagScene';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
@@ -167,8 +168,8 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
       s.reveal = Math.max(reveal, progress);
       
       const baseTargetRadius = MIN_RADIUS + (maxRadius - MIN_RADIUS) * s.reveal;
-      // Expand to massive circle filling viewport
-      const expandedRadius = Math.max(window.innerWidth, window.innerHeight) * 1.5;
+      // Expand to massive circle filling viewport completely (including corners)
+      const expandedRadius = Math.max(window.innerWidth, window.innerHeight) * 2.5;
       s.targetRadius = baseTargetRadius * (1 - progress) + expandedRadius * progress;
       
       s.radius += (s.targetRadius - s.radius) * RADIUS_LERP;
@@ -183,9 +184,12 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
       const finalRadius = s.radius * breath;
       const diameter = finalRadius * 2;
 
-      // World-locked bag: offset inside sphere so GLB stays at wordmark center
-      const offsetX = s.bagCenterX - localX;
-      const offsetY = s.bagCenterY - localY;
+      // World-locked bag: offset inside sphere so GLB stays at wordmark center initially,
+      // but moves to the center of the sphere during expansion.
+      const targetOffsetX = s.bagCenterX - localX;
+      const targetOffsetY = s.bagCenterY - localY;
+      const offsetX = targetOffsetX * (1 - progress);
+      const offsetY = targetOffsetY * (1 - progress);
 
       if (sphereRef.current) {
         sphereRef.current.style.transform = `translate3d(${localX}px, ${localY}px, 0) translate(-50%, -50%)`;
