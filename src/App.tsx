@@ -4,7 +4,6 @@ import { HeroInteractionProvider } from './context/HeroInteractionContext';
 import { Loader } from './components/sections/Loader';
 import { StillHeader } from './components/sections/StillHeader';
 import { StillHero } from './components/sections/StillHero';
-import { StillExpandedBag } from './components/sections/StillExpandedBag';
 import { StillCategories } from './components/sections/StillCategories';
 import { StillCraftsmanship } from './components/sections/StillCraftsmanship';
 import { StillStory } from './components/sections/StillStory';
@@ -37,7 +36,6 @@ const AppContent: React.FC = () => {
 
         <main className="flex-1 flex flex-col">
           <StillHero onOpenQuote={() => handleOpenQuote()} />
-          <StillExpandedBag />
           <StillCategories onSelectCategory={(cat) => handleOpenQuote(cat)} />
           <StillCraftsmanship />
           <StillStory />

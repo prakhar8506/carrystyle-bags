@@ -15,6 +15,19 @@ const SmoothScrollContext = createContext<SmoothScrollContextType>({
   scrollTo: () => {},
 });
 
+/**
+ * The live Lenis instance, held outside the closure the scrollerProxy captures.
+ *
+ * ScrollTrigger caches a scroller's read function the first time a trigger uses
+ * it, and children create their triggers before this provider's effect runs. In
+ * StrictMode the provider mounts twice, so that cached function would otherwise
+ * keep reading the first, already-destroyed instance — its scroll position
+ * stays 0 forever and every scroll-linked animation silently freezes in dev.
+ * Reading through this binding keeps the cached function pointed at whichever
+ * instance is actually running.
+ */
+let activeLenis: Lenis | null = null;
+
 export const useSmoothScroll = () => useContext(SmoothScrollContext);
 
 export const SmoothScrollProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -58,6 +71,7 @@ export const SmoothScrollProvider: React.FC<{ children: React.ReactNode }> = ({ 
       infinite: false,
     });
 
+    activeLenis = lenisInstance;
     setLenis(lenisInstance);
 
     document.documentElement.classList.add('lenis');
@@ -65,10 +79,11 @@ export const SmoothScrollProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // scrollerProxy: ScrollTrigger reads Lenis scroll position
     ScrollTrigger.scrollerProxy(document.documentElement, {
       scrollTop(value) {
+        if (!activeLenis) return 0;
         if (arguments.length && value !== undefined) {
-          lenisInstance.scrollTo(value, { immediate: true });
+          activeLenis.scrollTo(value, { immediate: true });
         }
-        return lenisInstance.scroll;
+        return activeLenis.scroll;
       },
       getBoundingClientRect() {
         return {
@@ -103,6 +118,7 @@ export const SmoothScrollProvider: React.FC<{ children: React.ReactNode }> = ({ 
     ScrollTrigger.refresh();
 
     return () => {
+      if (activeLenis === lenisInstance) activeLenis = null;
       document.documentElement.classList.remove('lenis');
       lenisInstance.destroy();
       gsap.ticker.remove(updateLenis);

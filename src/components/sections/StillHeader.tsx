@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, X } from 'lucide-react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { STILL_COPY } from '../../lib/content/stillCopy';
 import { useSmoothScroll } from '../providers/SmoothScrollProvider';
+import { HERO_SEQ_DARK_AT, heroSeqScrollVh } from '../../lib/heroSequence';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 interface StillHeaderProps {
   onOpenQuote: () => void;
@@ -11,6 +15,8 @@ export const StillHeader: React.FC<StillHeaderProps> = ({ onOpenQuote }) => {
   const { lenis, scrollTo } = useSmoothScroll();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [onExpanded, setOnExpanded] = useState(false);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (!lenis) return;
@@ -24,6 +30,33 @@ export const StillHeader: React.FC<StillHeaderProps> = ({ onOpenQuote }) => {
       lenis.off('scroll', onScroll);
     };
   }, [lenis]);
+
+  // Nav switches to light type while the hero holds the screen dark.
+  //
+  // Reduced motion renders the hero's dark resting state immediately, so the
+  // nav starts light and only reverts once the hero is scrolled away. With
+  // motion, the dark range is expressed as absolute scroll positions rather
+  // than a `#hero` trigger, because the hero is pinned across that whole range
+  // and its own top never advances.
+  useEffect(() => {
+    if (reducedMotion) {
+      setOnExpanded(true);
+      const st = ScrollTrigger.create({
+        trigger: '#hero',
+        start: 'bottom 12%',
+        onToggle: (self) => setOnExpanded(!self.isActive),
+      });
+      return () => st.kill();
+    }
+
+    const st = ScrollTrigger.create({
+      start: () => window.innerHeight * heroSeqScrollVh() * HERO_SEQ_DARK_AT,
+      end: () => window.innerHeight * (heroSeqScrollVh() + 1),
+      invalidateOnRefresh: true,
+      onToggle: (self) => setOnExpanded(self.isActive),
+    });
+    return () => st.kill();
+  }, [reducedMotion]);
 
   const navLinks = [
     { name: 'Bag Types', href: '#categories' },
@@ -42,9 +75,11 @@ export const StillHeader: React.FC<StillHeaderProps> = ({ onOpenQuote }) => {
     <>
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled
-            ? 'bg-bone/90 backdrop-blur-md border-b border-ink/10 py-3 shadow-sm'
-            : 'bg-transparent py-5'
+          onExpanded
+            ? 'bg-transparent py-5'
+            : isScrolled
+              ? 'bg-bone/90 backdrop-blur-md border-b border-ink/10 py-3 shadow-sm'
+              : 'bg-transparent py-5'
         }`}
         style={{ height: 'var(--nav-h)' }}
       >
@@ -53,7 +88,9 @@ export const StillHeader: React.FC<StillHeaderProps> = ({ onOpenQuote }) => {
             <a
               href="#hero"
               onClick={(e) => handleNavClick(e, '#hero')}
-              className="inline-flex items-baseline font-wordmark text-ink leading-none group cursor-pointer"
+              className={`inline-flex items-baseline font-wordmark leading-none group cursor-pointer transition-colors duration-300 ${
+                onExpanded ? 'text-bone' : 'text-ink'
+              }`}
               style={{ fontSize: '22px', fontWeight: 900, letterSpacing: '-0.5px' }}
               aria-label="CARRYSTYLE. — back to top"
             >
@@ -72,7 +109,9 @@ export const StillHeader: React.FC<StillHeaderProps> = ({ onOpenQuote }) => {
                 <a
                   href={link.href}
                   onClick={(e) => handleNavClick(e, link.href)}
-                  className="nav-underline font-sans text-mist hover:text-ink transition-colors duration-250 text-sm tracking-wider cursor-pointer"
+                  className={`nav-underline font-sans transition-colors duration-250 text-sm tracking-wider cursor-pointer ${
+                    onExpanded ? 'text-bone/70 hover:text-bone' : 'text-mist hover:text-ink'
+                  }`}
                 >
                   {link.name}
                 </a>
@@ -83,7 +122,9 @@ export const StillHeader: React.FC<StillHeaderProps> = ({ onOpenQuote }) => {
           <div className="flex items-center justify-end gap-5 md:flex-none">
             <button
               onClick={onOpenQuote}
-              className="hidden md:inline-flex items-center font-sans text-ink group text-sm font-medium tracking-wider gap-1.5 cursor-pointer"
+              className={`hidden md:inline-flex items-center font-sans group text-sm font-medium tracking-wider gap-1.5 cursor-pointer transition-colors duration-300 ${
+                onExpanded ? 'text-bone' : 'text-ink'
+              }`}
             >
               <span>Get a Quote</span>
               <span aria-hidden="true" className="inline-block transition-transform duration-250 ease-out group-hover:translate-x-1">
@@ -94,7 +135,9 @@ export const StillHeader: React.FC<StillHeaderProps> = ({ onOpenQuote }) => {
             <button
               type="button"
               onClick={onOpenQuote}
-              className="relative inline-flex items-center justify-center text-ink hover:text-mist transition-colors p-1 cursor-pointer"
+              className={`relative inline-flex items-center justify-center transition-colors p-1 cursor-pointer ${
+                onExpanded ? 'text-bone hover:text-bone/70' : 'text-ink hover:text-mist'
+              }`}
               aria-label="Open quote cart"
             >
               <ShoppingBag className="w-5 h-5 stroke-[1.5]" />
@@ -106,13 +149,15 @@ export const StillHeader: React.FC<StillHeaderProps> = ({ onOpenQuote }) => {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-ink cursor-pointer"
+              className={`md:hidden p-2 cursor-pointer transition-colors duration-300 ${
+                onExpanded ? 'text-bone' : 'text-ink'
+              }`}
               aria-label="Toggle menu"
             >
               <div className="w-5 h-3.5 flex flex-col justify-between">
-                <span className="block h-[1.5px] bg-ink w-full" />
-                <span className="block h-[1.5px] bg-ink w-full" />
-                <span className="block h-[1.5px] bg-ink w-full" />
+                <span className={`block h-[1.5px] w-full ${onExpanded ? 'bg-bone' : 'bg-ink'}`} />
+                <span className={`block h-[1.5px] w-full ${onExpanded ? 'bg-bone' : 'bg-ink'}`} />
+                <span className={`block h-[1.5px] w-full ${onExpanded ? 'bg-bone' : 'bg-ink'}`} />
               </div>
             </button>
           </div>

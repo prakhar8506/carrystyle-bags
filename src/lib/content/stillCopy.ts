@@ -37,6 +37,13 @@ export const STILL_COPY = {
       leadTimeLabel: "middleman markup",
     }
   },
+  expanded: {
+    step: "01",
+    label: "The Collection",
+    headline: "Custom bags at factory scale, for every brand.",
+    description: "We engineer and produce branded carry bags for India's leading corporates — canvas totes, laminated jute shoppers, and executive gift bags — from our Mumbai and NCR facilities.",
+    stats: "50,000+ bags / month · 0 middleman markup",
+  },
   bagTypes: [
     {
       id: "gift-bag",

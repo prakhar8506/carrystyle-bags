@@ -132,3 +132,73 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/*
+  Hero scroll sequence layers.
+  Gradients are declared once here; only transform/opacity are animated.
+*/
+.hero-seq-iris,
+.hero-seq-halo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Dark focal circle that becomes the full-screen background */
+.hero-seq-iris {
+  z-index: 1;
+  background: radial-gradient(
+    circle at 50% 46%,
+    #16233a 0%,
+    #0f2242 42%,
+    #0a1729 72%,
+    #081220 100%
+  );
+}
+
+/* Larger, very soft, low-opacity ring around the iris */
+.hero-seq-halo {
+  z-index: 0;
+  transform-origin: center;
+  background: radial-gradient(
+    circle,
+    rgba(15, 34, 66, 0.16) 0%,
+    rgba(15, 34, 66, 0.1) 46%,
+    rgba(188, 211, 216, 0.14) 62%,
+    rgba(239, 237, 230, 0) 74%
+  );
+}
+
+/*
+  Bag growth is applied to the canvas itself, never to an ancestor of it —
+  react-three-fiber measures its container with getBoundingClientRect, so a
+  scaled ancestor makes it re-measure against its own scaled box every frame
+  and shrink toward nothing. Leaves are safe to transform.
+*/
+.hero-seq-product canvas {
+  transform: scale(var(--seq-bag-scale, 1));
+  transform-origin: center center;
+}
+
+/* Static soft glow behind the product — opacity only, blur never re-computed */
+.hero-seq-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150%;
+  height: 130%;
+  transform: translate(-50%, -50%) scale(var(--seq-bag-scale, 1));
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(226, 240, 244, 0.24) 28%,
+    rgba(188, 211, 216, 0.1) 48%,
+    rgba(15, 34, 66, 0) 70%
+  );
+}
+

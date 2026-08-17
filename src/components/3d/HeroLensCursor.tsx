@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { HeroBagScene } from './HeroBagScene';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { heroSequence } from '../../lib/heroSequence';
 
 interface HeroLensCursorProps {
   heroRef: React.RefObject<HTMLElement>;
@@ -56,8 +56,6 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
     headlineRect: null as DOMRect | null,
     heroRect: null as DOMRect | null,
     visible: true,
-    expansionProgress: 0,
-    scrollAwayProgress: 0,
   });
 
   const bagSize = isMobile ? 420 : 700;
@@ -71,31 +69,6 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
     s.x = s.targetX;
     s.y = s.targetY;
 
-    // Set up ScrollTrigger for the expansion section
-    const st = gsap.context(() => {
-      ScrollTrigger.create({
-        trigger: '#expansion-trigger',
-        start: 'top bottom', // Start when the top of the trigger hits the bottom of viewport
-        end: 'top top',      // End when it reaches the top (fully in view)
-        scrub: true,
-        onUpdate: (self) => {
-          stateRef.current.expansionProgress = self.progress;
-        },
-      });
-
-      // Scroll away trigger past pinned section
-      ScrollTrigger.create({
-        trigger: '#expansion-trigger',
-        start: 'bottom top',
-        end: () => 'bottom+=' + window.innerHeight + ' top',
-        scrub: true,
-        onUpdate: (self) => {
-          stateRef.current.scrollAwayProgress = self.progress;
-        },
-      });
-    });
-
-    // Notify ExpandedBag that the cursor ScrollTrigger is ready
     window.dispatchEvent(new CustomEvent('hero-cursor-ready'));
 
     const measure = () => {
@@ -153,68 +126,59 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
 
     const tick = () => {
       const s = stateRef.current;
-      const progress = s.expansionProgress;
-      const scrollAway = s.scrollAwayProgress;
-      
-      // If expanding, override target towards viewport center
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight / 2;
-      
-      const effectiveTargetX = s.targetX * (1 - progress) + centerX * progress;
-      const effectiveTargetY = s.targetY * (1 - progress) + centerY * progress;
-      
-      const currentPosLerp = progress > 0 ? POS_LERP + progress * 0.15 : POS_LERP;
-      s.x += (effectiveTargetX - s.x) * currentPosLerp;
-      s.y += (effectiveTargetY - s.y) * currentPosLerp;
+
+      s.x += (s.targetX - s.x) * POS_LERP;
+      s.y += (s.targetY - s.y) * POS_LERP;
 
       frame++;
       if (frame % 8 === 0) measure();
 
       const hr = s.heroRect;
-      // When expanding, always keep visible
       const inHero =
-        hr &&
+        !!hr &&
         s.x >= hr.left &&
         s.x <= hr.right &&
         s.y >= hr.top &&
         s.y <= hr.bottom;
-      s.visible = !!inHero || progress > 0;
+      s.visible = inHero;
 
       const reveal = inHero ? computeReveal(s.x, s.y) : 0;
-      // Force reveal to 1 if expanding
-      s.reveal = Math.max(reveal, progress);
-      
-      const baseTargetRadius = MIN_RADIUS + (maxRadius - MIN_RADIUS) * s.reveal;
-      // Expand to massive circle filling viewport completely (including corners)
-      const expandedRadius = Math.max(window.innerWidth, window.innerHeight) * 2.5;
-      s.targetRadius = baseTargetRadius * (1 - progress) + expandedRadius * progress;
-      
-      const currentRadiusLerp = progress > 0 ? RADIUS_LERP + progress * 0.2 : RADIUS_LERP;
-      s.radius += (s.targetRadius - s.radius) * currentRadiusLerp;
+      s.reveal = reveal;
 
-      const targetBagOp = Math.max(targetBagOpacity(s.reveal), progress > 0 ? 1 : 0);
+      s.targetRadius = MIN_RADIUS + (maxRadius - MIN_RADIUS) * s.reveal;
+      s.radius += (s.targetRadius - s.radius) * RADIUS_LERP;
+
+      const targetBagOp = targetBagOpacity(s.reveal);
       s.bagOpacity += (targetBagOp - s.bagOpacity) * BAG_OPACITY_LERP;
-      const solidOpacity = Math.max(0, (1 - s.bagOpacity) * (1 - progress * 2.5));
+      const solidOpacity = Math.max(0, 1 - s.bagOpacity);
 
-      const localX = s.x;
-      const localY = s.y - scrollAway * window.innerHeight;
-      const breath = reveal < 0.08 && progress < 0.01 ? 1 + Math.sin(performance.now() * 0.0025) * 0.035 : 1;
-      const finalRadius = s.radius * breath;
-      const diameter = finalRadius * 2;
+      const breath = reveal < 0.08 ? 1 + Math.sin(performance.now() * 0.0025) * 0.035 : 1;
+      const diameter = s.radius * breath * 2;
+      const offsetX = s.bagCenterX - s.x;
+      const offsetY = s.bagCenterY - s.y;
 
-      // World-locked bag: offset inside sphere so GLB stays at wordmark center initially,
-      // but moves to the center of the sphere during expansion.
-      const targetOffsetX = s.bagCenterX - localX;
-      const targetOffsetY = s.bagCenterY - localY;
-      const offsetX = targetOffsetX * (1 - progress);
-      const offsetY = targetOffsetY * (1 - progress);
+      // Publish the current pose so the scroll sequence can start its growth
+      // from whatever hover has left the lens looking like. Read-only channel:
+      // nothing here feeds back into the hover behaviour above.
+      const pose = heroSequence.lens;
+      pose.x = s.x;
+      pose.y = s.y;
+      pose.radius = diameter / 2;
+      pose.bagX = s.bagCenterX;
+      pose.bagY = s.bagCenterY;
+      pose.bagOpacity = s.bagOpacity;
+      pose.bagSize = bagSize * 0.9;
+      pose.ready = true;
+
+      // Cross-fade out as the scroll sequence's iris takes over
+      const lensOpacity = s.visible ? 1 - heroSequence.lensFade : 0;
 
       if (sphereRef.current) {
-        sphereRef.current.style.transform = `translate3d(${localX}px, ${localY}px, 0) translate(-50%, -50%)`;
+        sphereRef.current.style.transform = `translate3d(${s.x}px, ${s.y}px, 0) translate(-50%, -50%)`;
         sphereRef.current.style.width = `${diameter}px`;
         sphereRef.current.style.height = `${diameter}px`;
-        sphereRef.current.style.opacity = s.visible ? '1' : '0';
-        sphereRef.current.style.visibility = s.visible ? 'visible' : 'hidden';
+        sphereRef.current.style.opacity = String(lensOpacity);
+        sphereRef.current.style.visibility = lensOpacity > 0.01 ? 'visible' : 'hidden';
       }
 
       if (solidRef.current) {
@@ -227,22 +191,19 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
 
       if (bagWrapRef.current) {
         bagWrapRef.current.style.opacity = String(s.bagOpacity);
-        // Subtle pop for the bag when scrolling down
-        const scale = 1 + progress * 0.15; 
-        bagWrapRef.current.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) scale(${scale})`;
+        bagWrapRef.current.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`;
         bagWrapRef.current.style.visibility = s.bagOpacity > 0.015 ? 'visible' : 'hidden';
       }
 
       if (glowRef.current) {
-        glowRef.current.style.opacity = String(0.6 + progress * 0.4);
-        glowRef.current.style.transform = `translate(-50%, -50%) scale(${1 + progress * 0.5})`;
+        glowRef.current.style.opacity = '0.6';
+        glowRef.current.style.transform = 'translate(-50%, -50%) scale(1)';
       }
     };
 
     gsap.ticker.add(tick);
 
     return () => {
-      st.revert();
       gsap.ticker.remove(tick);
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure);
@@ -268,6 +229,7 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
 
   return (
     <div
+      id="hero-lens-sphere"
       ref={sphereRef}
       className="fixed top-0 left-0 z-[40] pointer-events-none will-change-transform rounded-full overflow-hidden bg-ink"
       style={{

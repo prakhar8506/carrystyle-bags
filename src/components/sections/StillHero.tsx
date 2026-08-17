@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HeroLensCursor } from '../3d/HeroLensCursor';
+import { HeroScrollSequence } from '../3d/HeroScrollSequence';
 import { STILL_COPY } from '../../lib/content/stillCopy';
 
 interface StillHeroProps {
@@ -33,7 +34,10 @@ export const StillHero: React.FC<StillHeroProps> = () => {
       className="relative w-full min-h-screen bg-bone flex flex-col justify-between pt-20 select-none cursor-none"
     >
       {/* Giant wordmark — sits behind the lens layer */}
-      <div className="absolute inset-0 z-10 flex flex-col justify-center items-center px-2 sm:px-6 overflow-hidden pointer-events-none">
+      <div
+        data-hero-chrome
+        className="absolute inset-0 z-10 flex flex-col justify-center items-center px-2 sm:px-6 overflow-hidden pointer-events-none"
+      >
         <h1
           ref={headlineRef}
           className="font-wordmark font-black leading-[0.76] tracking-[-0.045em] whitespace-nowrap text-ink text-center w-full pointer-events-none"
@@ -80,8 +84,14 @@ export const StillHero: React.FC<StillHeroProps> = () => {
       {/* Cursor sphere + lens reveal */}
       <HeroLensCursor heroRef={heroRef} headlineRef={headlineRef} isMobile={isMobile} active />
 
+      {/* Scroll-scrubbed iris wipe + product reveal (isolated, additive) */}
+      <HeroScrollSequence />
+
       {/* Left support panel — alpine green to pair with ink wordmark */}
-      <div className="absolute top-24 left-6 sm:left-12 z-30 hidden xl:flex flex-col justify-start pointer-events-none max-w-[260px]">
+      <div
+        data-hero-chrome
+        className="absolute top-24 left-6 sm:left-12 z-30 hidden xl:flex flex-col justify-start pointer-events-none max-w-[260px]"
+      >
         <div className="font-sans text-[11px] tracking-[0.2em] uppercase text-alpine/70 font-bold">
           <span className="text-alpine">{STILL_COPY.hero.step}</span>
           <span className="mx-2 text-alpine/35">/</span>
@@ -116,7 +126,10 @@ export const StillHero: React.FC<StillHeroProps> = () => {
       </div>
 
       {/* Bottom bar */}
-      <div className="relative z-30 inset-x-0 bottom-0 flex items-end justify-between px-[clamp(24px,4vw,64px)] pb-[clamp(20px,4vh,44px)] mt-auto pointer-events-none">
+      <div
+        data-hero-chrome
+        className="relative z-30 inset-x-0 bottom-0 flex items-end justify-between px-[clamp(24px,4vw,64px)] pb-[clamp(20px,4vh,44px)] mt-auto pointer-events-none"
+      >
         <p
           className="font-display font-light text-ink leading-[1.15] tracking-[-0.01em]"
           style={{ fontSize: 'clamp(15px, 1.3vw, 20px)' }}
