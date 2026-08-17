@@ -95,12 +95,18 @@ export const SmoothScrollProvider: React.FC<{ children: React.ReactNode }> = ({ 
       scrub: 0.8,
     });
 
+    const handleRefresh = () => {
+      lenisInstance.resize();
+    };
+    ScrollTrigger.addEventListener('refresh', handleRefresh);
+
     ScrollTrigger.refresh();
 
     return () => {
       document.documentElement.classList.remove('lenis');
       lenisInstance.destroy();
       gsap.ticker.remove(updateLenis);
+      ScrollTrigger.removeEventListener('refresh', handleRefresh);
       ScrollTrigger.getAll().forEach((st) => st.kill());
     };
   }, []);

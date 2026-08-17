@@ -57,6 +57,7 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
     heroRect: null as DOMRect | null,
     visible: true,
     expansionProgress: 0,
+    scrollAwayProgress: 0,
   });
 
   const bagSize = isMobile ? 420 : 700;
@@ -81,16 +82,30 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
           stateRef.current.expansionProgress = self.progress;
         },
       });
+
+      // Scroll away trigger past pinned section
+      ScrollTrigger.create({
+        trigger: '#expansion-trigger',
+        start: 'bottom top',
+        end: () => 'bottom+=' + window.innerHeight + ' top',
+        scrub: true,
+        onUpdate: (self) => {
+          stateRef.current.scrollAwayProgress = self.progress;
+        },
+      });
     });
+
+    // Notify ExpandedBag that the cursor ScrollTrigger is ready
+    window.dispatchEvent(new CustomEvent('hero-cursor-ready'));
 
     const measure = () => {
       const hr = heroRef.current?.getBoundingClientRect();
       const headline = headlineRef.current?.getBoundingClientRect();
       if (hr) stateRef.current.heroRect = hr;
-      if (headline && hr) {
+      if (headline) {
         stateRef.current.headlineRect = headline;
-        stateRef.current.bagCenterX = headline.left + headline.width / 2 - hr.left;
-        stateRef.current.bagCenterY = headline.top + headline.height / 2 - hr.top;
+        stateRef.current.bagCenterX = headline.left + headline.width / 2;
+        stateRef.current.bagCenterY = headline.top + headline.height / 2;
       }
     };
 
@@ -119,8 +134,8 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
       const rect = stateRef.current.headlineRect;
       if (!rect) return 0;
 
-      const padX = 24;
-      const padY = 18;
+      const padX = 36;
+      const padY = 24;
       const inX = cx >= rect.left - padX && cx <= rect.right + padX;
       const inY = cy >= rect.top - padY && cy <= rect.bottom + padY;
       if (!inX || !inY) return 0;
@@ -139,16 +154,18 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
     const tick = () => {
       const s = stateRef.current;
       const progress = s.expansionProgress;
+      const scrollAway = s.scrollAwayProgress;
       
-      // If expanding, override target towards center
+      // If expanding, override target towards viewport center
       const centerX = window.innerWidth / 2;
       const centerY = window.innerHeight / 2;
       
       const effectiveTargetX = s.targetX * (1 - progress) + centerX * progress;
       const effectiveTargetY = s.targetY * (1 - progress) + centerY * progress;
       
-      s.x += (effectiveTargetX - s.x) * POS_LERP;
-      s.y += (effectiveTargetY - s.y) * POS_LERP;
+      const currentPosLerp = progress > 0 ? POS_LERP + progress * 0.15 : POS_LERP;
+      s.x += (effectiveTargetX - s.x) * currentPosLerp;
+      s.y += (effectiveTargetY - s.y) * currentPosLerp;
 
       frame++;
       if (frame % 8 === 0) measure();
@@ -172,15 +189,16 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
       const expandedRadius = Math.max(window.innerWidth, window.innerHeight) * 2.5;
       s.targetRadius = baseTargetRadius * (1 - progress) + expandedRadius * progress;
       
-      s.radius += (s.targetRadius - s.radius) * RADIUS_LERP;
+      const currentRadiusLerp = progress > 0 ? RADIUS_LERP + progress * 0.2 : RADIUS_LERP;
+      s.radius += (s.targetRadius - s.radius) * currentRadiusLerp;
 
       const targetBagOp = Math.max(targetBagOpacity(s.reveal), progress > 0 ? 1 : 0);
       s.bagOpacity += (targetBagOp - s.bagOpacity) * BAG_OPACITY_LERP;
-      const solidOpacity = Math.max(0, 1 - s.bagOpacity - (progress * 2)); // Fade out solid faster when expanding
+      const solidOpacity = Math.max(0, (1 - s.bagOpacity) * (1 - progress * 2.5));
 
-      const localX = hr ? s.x - hr.left : s.x;
-      const localY = hr ? s.y - hr.top : s.y;
-      const breath = reveal < 0.08 ? 1 + Math.sin(performance.now() * 0.0025) * 0.035 : 1;
+      const localX = s.x;
+      const localY = s.y - scrollAway * window.innerHeight;
+      const breath = reveal < 0.08 && progress < 0.01 ? 1 + Math.sin(performance.now() * 0.0025) * 0.035 : 1;
       const finalRadius = s.radius * breath;
       const diameter = finalRadius * 2;
 
@@ -209,14 +227,13 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
 
       if (bagWrapRef.current) {
         bagWrapRef.current.style.opacity = String(s.bagOpacity);
-        // Expand the bag when scrolling down
-        const scale = 1 + progress * 2.5; 
+        // Subtle pop for the bag when scrolling down
+        const scale = 1 + progress * 0.15; 
         bagWrapRef.current.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) scale(${scale})`;
         bagWrapRef.current.style.visibility = s.bagOpacity > 0.015 ? 'visible' : 'hidden';
       }
 
       if (glowRef.current) {
-        // Base opacity 0.6, scales up to 1.0 and expands during progress
         glowRef.current.style.opacity = String(0.6 + progress * 0.4);
         glowRef.current.style.transform = `translate(-50%, -50%) scale(${1 + progress * 0.5})`;
       }
@@ -252,7 +269,7 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
   return (
     <div
       ref={sphereRef}
-      className="absolute top-0 left-0 z-[40] pointer-events-none will-change-transform rounded-full overflow-hidden"
+      className="fixed top-0 left-0 z-[40] pointer-events-none will-change-transform rounded-full overflow-hidden bg-ink"
       style={{
         width: MIN_RADIUS * 2,
         height: MIN_RADIUS * 2,
@@ -261,7 +278,7 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
           '0 0 0 1px rgba(188, 211, 216, 0.2), 0 0 55px rgba(188, 211, 216, 0.32), inset 0 0 55px rgba(15, 34, 66, 0.42)',
       }}
     >
-      {/* Solid metallic fill — fades as bag reveals inside same sphere */}
+      {/* Solid metallic fill — 100% opaque, fades only as bag reveals */}
       <div ref={solidRef} className="absolute inset-0 rounded-full sphere-cursor-glow" />
 
       {/* Bag GLB — parallax-offset so it stays fixed at wordmark center while sphere moves */}
@@ -275,7 +292,7 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
           visibility: 'hidden',
         }}
       >
-        <div className="relative w-full h-full rounded-full overflow-hidden bg-ink">
+        <div className="relative w-full h-full rounded-full overflow-hidden">
           <div
             ref={glowRef}
             className="absolute left-1/2 top-1/2 pointer-events-none radial-blur-teal will-change-transform"

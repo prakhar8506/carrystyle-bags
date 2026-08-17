@@ -7,36 +7,50 @@ export const StillExpandedBag: React.FC = () => {
   const textRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      // Pin the section for the duration of the scroll
-      ScrollTrigger.create({
-        trigger: containerRef.current,
-        start: 'top top',
-        end: '+=200%',
-        pin: true,
-        scrub: 1,
-        id: 'expanded-bag-pin',
-      });
+    let ctx: gsap.Context;
 
-      // Animate the text fading in and moving up
-      gsap.fromTo(
-        textRef.current,
-        { opacity: 0, y: 100 },
-        {
-          opacity: 1,
-          y: 0,
-          ease: 'power2.out',
-          scrollTrigger: {
-            trigger: containerRef.current,
-            start: 'top bottom', // Start animating as soon as the section enters the viewport
-            end: 'top top',      // Finish when it pins
-            scrub: 1,
-          },
-        }
-      );
-    }, containerRef);
+    const initTriggers = () => {
+      ctx = gsap.context(() => {
+        // Pin the section for the duration of the scroll
+        ScrollTrigger.create({
+          trigger: containerRef.current,
+          start: 'top top',
+          end: () => '+=' + window.innerHeight * 2,
+          pin: true,
+          scrub: 1,
+          id: 'expanded-bag-pin',
+        });
 
-    return () => ctx.revert();
+        // Animate the text fading in and moving up
+        gsap.fromTo(
+          textRef.current,
+          { opacity: 0, y: 100 },
+          {
+            opacity: 1,
+            y: 0,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: containerRef.current,
+              start: 'top bottom', // Start animating as soon as the section enters the viewport
+              end: 'top top',      // Finish when it pins
+              scrub: 1,
+            },
+          }
+        );
+      }, containerRef);
+    };
+
+    window.addEventListener('hero-cursor-ready', initTriggers);
+
+    const timeoutId = setTimeout(() => {
+      if (!ctx) initTriggers();
+    }, 100);
+
+    return () => {
+      window.removeEventListener('hero-cursor-ready', initTriggers);
+      clearTimeout(timeoutId);
+      if (ctx) ctx.revert();
+    };
   }, []);
 
   return (
