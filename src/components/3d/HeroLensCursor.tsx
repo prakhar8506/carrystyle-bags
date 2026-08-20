@@ -12,8 +12,8 @@ interface HeroLensCursorProps {
 }
 
 const MIN_RADIUS = 44;
-const MAX_RADIUS_DESKTOP = 400;
-const MAX_RADIUS_MOBILE = 240;
+const MAX_RADIUS_DESKTOP = 430;
+const MAX_RADIUS_MOBILE = 255;
 const POS_LERP = 0.18;
 const RADIUS_LERP = 0.12;
 const BAG_OPACITY_LERP = 0.11;
@@ -58,7 +58,12 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
     visible: true,
   });
 
-  const bagSize = isMobile ? 420 : 700;
+  // Canvas is sized well past the sphere so the square drawing buffer sits
+  // outside the circular mask. The bag itself occupies ~64% of that canvas
+  // (see HeroBagScene camera/fit), so it fills the circle without the square
+  // ever showing, and mouse-tilt stays inside the buffer.
+  const bagCanvas = isMobile ? 580 : 960;
+  const bagVisual = bagCanvas * 0.64;
 
   useEffect(() => {
     if (!active || reducedMotion) return;
@@ -167,7 +172,7 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
       pose.bagX = s.bagCenterX;
       pose.bagY = s.bagCenterY;
       pose.bagOpacity = s.bagOpacity;
-      pose.bagSize = bagSize * 0.9;
+      pose.bagSize = bagVisual;
       pose.ready = true;
 
       // Cross-fade out as the scroll sequence's iris takes over
@@ -210,7 +215,7 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('touchmove', onTouchMove);
     };
-  }, [active, reducedMotion, isMobile, headlineRef, heroRef]);
+  }, [active, reducedMotion, isMobile, headlineRef, heroRef, bagCanvas, bagVisual]);
 
   if (!active) return null;
 
@@ -219,7 +224,7 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
       <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
         <div
           className="rounded-full overflow-hidden bg-ink border border-teal/30"
-          style={{ width: bagSize, height: bagSize }}
+          style={{ width: bagVisual, height: bagVisual }}
         >
           <HeroBagScene isMobile={isMobile} />
         </div>
@@ -248,24 +253,24 @@ export const HeroLensCursor: React.FC<HeroLensCursorProps> = ({
         ref={bagWrapRef}
         className="absolute left-1/2 top-1/2 pointer-events-none will-change-transform"
         style={{
-          width: bagSize,
-          height: bagSize,
+          width: bagCanvas,
+          height: bagCanvas,
           opacity: 0,
           visibility: 'hidden',
         }}
       >
-        <div className="relative w-full h-full rounded-full overflow-hidden">
+        <div className="relative w-full h-full">
           <div
             ref={glowRef}
             className="absolute left-1/2 top-1/2 pointer-events-none radial-blur-teal will-change-transform"
             style={{
-              width: '88%',
-              height: '88%',
+              width: '70%',
+              height: '70%',
               transform: 'translate(-50%, -50%)',
               opacity: 0.6,
             }}
           />
-          <div className="absolute inset-[5%]">
+          <div className="absolute inset-0">
             <HeroBagScene isMobile={isMobile} />
           </div>
         </div>

@@ -36,6 +36,16 @@ const irisIdleScale = () => (window.innerHeight * IRIS_IDLE_VH) / IRIS_BASE;
 const irisGrownScale = () => (window.innerHeight * IRIS_GROWN_VH) / IRIS_BASE;
 
 /**
+ * How much larger the bag ends up once the iris has swallowed the screen.
+ *
+ * Through Phase B the bag is sized to sit inside the circle; once the circle
+ * is the backdrop that constraint is gone, so it keeps growing with the wipe
+ * and the whole thing reads as one expansion. Held back on narrow screens,
+ * where the copy block sits underneath the bag rather than beside it.
+ */
+const bagFinalScale = () => (window.innerWidth < 768 ? 1.22 : 1.32);
+
+/**
  * Scale needed for an iris centred at (cx, cy) to clear the farthest viewport
  * corner. Measured against the live viewport, so it covers at any size or
  * aspect ratio, and from any centre — the iris is not always centred.
@@ -103,6 +113,7 @@ export const HeroScrollSequence: React.FC = () => {
   const reducedMotion = useReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
   const irisRef = useRef<HTMLDivElement>(null);
+  const irisFillRef = useRef<HTMLDivElement>(null);
   const haloRef = useRef<HTMLDivElement>(null);
   const productRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
@@ -128,16 +139,23 @@ export const HeroScrollSequence: React.FC = () => {
 
   useEffect(() => {
     const iris = irisRef.current;
+    const irisFill = irisFillRef.current;
     const halo = haloRef.current;
     const product = productRef.current;
     const glow = glowRef.current;
-    if (!iris || !halo || !product || !glow) return;
+    if (!iris || !irisFill || !halo || !product || !glow) return;
 
     // Resolved to nodes up front: gsap.context() scopes selector strings to
     // rootRef, which lives inside #hero, so strings would not resolve here.
     const hero = document.getElementById('hero');
     if (!hero) return;
 
+    const copyLeft = gsap.utils.toArray<HTMLElement>(
+      hero.querySelectorAll('[data-hero-seq-left]'),
+    );
+    const copyRight = gsap.utils.toArray<HTMLElement>(
+      hero.querySelectorAll('[data-hero-seq-right]'),
+    );
     const copyLines = gsap.utils.toArray<HTMLElement>(
       hero.querySelectorAll('[data-hero-seq-line]'),
     );
@@ -154,9 +172,10 @@ export const HeroScrollSequence: React.FC = () => {
       const cy = window.innerHeight / 2;
       gsap.set([iris, halo], { xPercent: -50, yPercent: -50, x: cx, y: cy });
       gsap.set(iris, { scale: irisCoverScale(cx, cy), opacity: 1 });
-      gsap.set(halo, { opacity: 0 });
-      gsap.set(product, { x: 0, y: 0, '--seq-bag-scale': 1, opacity: 1 });
-      gsap.set(glow, { opacity: 1 });
+      gsap.set(irisFill, { opacity: 0 });
+      gsap.set(halo, { opacity: 0.55 });
+      gsap.set(product, { x: 0, y: 0, '--seq-bag-scale': bagFinalScale(), opacity: 1 });
+      gsap.set(glow, { opacity: 0.65 });
       gsap.set(copyLines, { opacity: 1, y: 0 });
       gsap.set(chrome, { opacity: 0 });
 
@@ -239,6 +258,7 @@ export const HeroScrollSequence: React.FC = () => {
       const o = getOrigin();
       const s = productStart();
       gsap.set([iris, halo], { x: o.x, y: o.y, scale: o.scale, opacity: 0 });
+      gsap.set(irisFill, { opacity: 1 - s.opacity });
       gsap.set(product, { x: s.x, y: s.y, '--seq-bag-scale': s.scale, opacity: 0 });
       gsap.set(glow, { opacity: 0 });
     };
@@ -305,9 +325,15 @@ export const HeroScrollSequence: React.FC = () => {
 
         // ── Phase B (8%–25%) — iris grows; bag emerges from inside it ──
         .fromTo(
-          [iris, halo],
+          iris,
           { opacity: 0 },
           { opacity: 1, duration: 0.04, ease: 'power2.out' },
+          0.05,
+        )
+        .fromTo(
+          halo,
+          { opacity: 0 },
+          { opacity: 0.7, duration: 0.04, ease: 'power2.out' },
           0.05,
         )
         // Settles onto the product, so the bag stays centred within the iris
@@ -349,6 +375,24 @@ export const HeroScrollSequence: React.FC = () => {
           0.05,
         )
         .to(product, { opacity: 1, duration: 0.16, ease: 'power2.out' }, 0.09)
+        // Metallic fill of the sphere fades as the bag comes through, the
+        // same way the hover lens drops its solid layer — so the expanding
+        // circle keeps its ink colour and glow instead of jumping to a
+        // different disc.
+        .fromTo(
+          irisFill,
+          { opacity: () => 1 - productStart().opacity },
+          { opacity: 0, duration: 0.16, ease: 'power2.out' },
+          0.09,
+        )
+        // Teal glow behind the bag, present from the moment the bag is, so
+        // the hover-lens halo is never dropped during the hand-off.
+        .fromTo(
+          glow,
+          { opacity: 0 },
+          { opacity: 0.65, duration: 0.16, ease: 'power2.out' },
+          0.09,
+        )
         // inOut rather than out: when hover has already revealed the bag at
         // full size this is a settle down to the resting size, and a
         // front-loaded ease would make that read as a jolt.
@@ -383,33 +427,65 @@ export const HeroScrollSequence: React.FC = () => {
           },
           0.33,
         )
-        // Halo dissolves once the iris has outgrown it
-        .to(halo, { opacity: 0, duration: 0.08, ease: 'power2.in' }, 0.25)
-        // Glow reads stronger now that it sits against a dark backdrop
-        .fromTo(
-          glow,
-          { opacity: 0 },
-          { opacity: 1, duration: 0.14, ease: 'power2.out' },
-          0.24,
+        // Bag rides the wipe, on the same split ease as the iris above, so the
+        // circle's expansion looks like it is carrying the bag with it and the
+        // bag lands larger on the dark screen
+        .to(
+          product,
+          {
+            '--seq-bag-scale': () => 1 + (bagFinalScale() - 1) * 0.55,
+            duration: 0.08,
+            ease: 'power2.in',
+          },
+          0.25,
         )
+        .to(
+          product,
+          {
+            '--seq-bag-scale': () => bagFinalScale(),
+            duration: 0.07,
+            ease: 'power1.out',
+          },
+          0.33,
+        )
+        // Halo stays with the rim until the iris has left the viewport —
+        // killing it at the start of the wipe is what made the sphere look
+        // like it had been swapped for a flat disc.
+        .to(halo, { opacity: 0.35, duration: 0.15, ease: 'none' }, 0.25)
+        .to(halo, { opacity: 0, duration: 0.08, ease: 'power1.out' }, 0.40)
+        // Glow holds through the wipe; a slight lift once the backdrop is
+        // fully the sphere, still the same teal wash, not a new light.
+        .to(glow, { opacity: 0.8, duration: 0.14, ease: 'power2.out' }, 0.25)
         // Dark-on-light hero chrome fades out as the wipe passes over it —
         // late enough that the iris is already occluding most of the wordmark
         .to(chrome, { opacity: 0, duration: 0.08, ease: 'power2.out' }, 0.29)
 
         // ── Phase D (40%–50%) — hold. Nothing animates. ──
 
-        // ── Phase E (50%–66%) — copy cascade ──
+        // ── Phase E (50%–66%) — copy cascade, left then right ──
         .fromTo(
-          copyLines,
+          copyLeft,
           { opacity: 0, y: 20 },
           {
             opacity: 1,
             y: 0,
             duration: 0.1,
-            stagger: 0.022,
+            stagger: 0.018,
             ease: 'power2.out',
           },
           0.5,
+        )
+        .fromTo(
+          copyRight,
+          { opacity: 0, y: 20 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.1,
+            stagger: 0.016,
+            ease: 'power2.out',
+          },
+          0.52,
         );
 
       // ── Phase F (66%–100%) — resting state, no further motion ──
@@ -463,12 +539,16 @@ export const HeroScrollSequence: React.FC = () => {
         style={{ width: IRIS_BASE, height: IRIS_BASE, opacity: 0 }}
       />
 
-      {/* Iris — fixed size, transform-scaled only. Becomes the dark backdrop. */}
+      {/* Iris — fixed size, transform-scaled only. Same paint as the hover
+          lens, so growth reads as that sphere enlarging. */}
       <div
         ref={irisRef}
         className="hero-seq-iris"
         style={{ width: IRIS_BASE, height: IRIS_BASE, opacity: 0 }}
-      />
+      >
+        <div ref={irisFillRef} className="hero-seq-iris-fill" />
+        <div className="hero-seq-iris-sheen" />
+      </div>
 
       {/* Product — above the iris, so it reads as emerging from within it.
           Sits high on narrow screens so the copy block has room beneath it.
@@ -485,16 +565,17 @@ export const HeroScrollSequence: React.FC = () => {
           style={{ opacity: 0, ['--seq-bag-scale' as string]: 0.3 } as React.CSSProperties}
         >
           <div ref={glowRef} className="hero-seq-glow" style={{ opacity: 0 }} />
-          <div className="relative h-[clamp(190px,32vh,300px)] md:h-[clamp(240px,46vh,460px)] aspect-square">
+          <div className="relative h-[min(90vw,540px)] md:h-[min(112vh,1000px)] aspect-square overflow-visible">
             {productMounted && <HeroBagScene />}
           </div>
         </div>
       </div>
 
-      {/* Copy block — Phase E */}
-      <div className="absolute z-[3] left-6 right-6 bottom-16 sm:bottom-20 md:right-auto md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:left-10 lg:left-16 xl:left-24 max-w-[min(100%,400px)]">
+      {/* Copy block — Phase E, left of the bag */}
+      <div className="absolute z-[3] left-6 right-6 bottom-16 sm:bottom-20 md:right-auto md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:left-10 lg:left-16 xl:left-24 max-w-[min(100%,380px)]">
         <p
           data-hero-seq-line
+          data-hero-seq-left
           className="font-sans text-[11px] tracking-[0.22em] uppercase text-white/45 font-bold"
           style={{ opacity: 0 }}
         >
@@ -505,6 +586,7 @@ export const HeroScrollSequence: React.FC = () => {
 
         <h2
           data-hero-seq-line
+          data-hero-seq-left
           className="mt-5 font-serif font-light text-white leading-[1.12] tracking-[-0.02em] text-[28px] sm:text-[32px] lg:text-[38px] xl:text-[42px]"
           style={{ opacity: 0 }}
         >
@@ -513,12 +595,14 @@ export const HeroScrollSequence: React.FC = () => {
 
         <div
           data-hero-seq-line
+          data-hero-seq-left
           className="mt-5 h-px w-[42px] bg-white/30"
           style={{ opacity: 0 }}
         />
 
         <p
           data-hero-seq-line
+          data-hero-seq-left
           className="mt-5 text-[13px] sm:text-sm leading-relaxed text-white/65 font-medium max-w-[36ch]"
           style={{ opacity: 0 }}
         >
@@ -527,11 +611,63 @@ export const HeroScrollSequence: React.FC = () => {
 
         <p
           data-hero-seq-line
+          data-hero-seq-left
           className="mt-8 font-sans text-[11px] sm:text-xs tracking-wide text-white/45 font-medium"
           style={{ opacity: 0 }}
         >
           {copy.stats}
         </p>
+      </div>
+
+      {/* Specs column — Phase E, right of the bag. Hidden on small screens
+          where the left copy already sits under the product. */}
+      <div className="absolute z-[3] hidden md:block right-10 lg:right-16 xl:right-24 top-1/2 -translate-y-1/2 w-[min(100%,260px)]">
+        <p
+          data-hero-seq-line
+          data-hero-seq-right
+          className="font-sans text-[11px] tracking-[0.22em] uppercase text-white/45 font-bold"
+          style={{ opacity: 0 }}
+        >
+          {copy.aside.kicker}
+        </p>
+
+        <h3
+          data-hero-seq-line
+          data-hero-seq-right
+          className="mt-3 font-serif font-light text-white leading-[1.15] tracking-[-0.02em] text-[20px] lg:text-[24px]"
+          style={{ opacity: 0 }}
+        >
+          {copy.aside.title}
+        </h3>
+
+        <p
+          data-hero-seq-line
+          data-hero-seq-right
+          className="mt-2.5 text-[12px] leading-relaxed text-white/55 font-medium"
+          style={{ opacity: 0 }}
+        >
+          {copy.aside.note}
+        </p>
+
+        <div
+          data-hero-seq-line
+          data-hero-seq-right
+          className="mt-5 h-px w-[42px] bg-white/25"
+          style={{ opacity: 0 }}
+        />
+
+        <dl className="mt-5 grid grid-cols-1 gap-3.5">
+          {copy.aside.specs.map((spec) => (
+            <div key={spec.label} data-hero-seq-line data-hero-seq-right style={{ opacity: 0 }}>
+              <dt className="font-sans text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">
+                {spec.label}
+              </dt>
+              <dd className="mt-0.5 text-[13px] leading-snug text-white/75 font-medium">
+                {spec.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </div>
     </div>
   );

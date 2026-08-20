@@ -38,10 +38,16 @@ export const StillHero: React.FC<StillHeroProps> = () => {
         data-hero-chrome
         className="absolute inset-0 z-10 flex flex-col justify-center items-center px-2 sm:px-6 overflow-hidden pointer-events-none"
       >
+        {/*
+          The wordmark sets ~6.4x its font size wide, so viewport width over
+          that is the largest size still fitting inside the container's
+          padding. Staying under it keeps the whole word on screen at every
+          width instead of running off both edges.
+        */}
         <h1
           ref={headlineRef}
           className="font-wordmark font-black leading-[0.76] tracking-[-0.045em] whitespace-nowrap text-ink text-center w-full pointer-events-none"
-          style={{ fontSize: 'clamp(64px, 19.5vw, 300px)' }}
+          style={{ fontSize: 'clamp(46px, 14.4vw, 300px)' }}
         >
           <span className="inline-block">
             <span className="sr-only">CARRYSTYLE.</span>

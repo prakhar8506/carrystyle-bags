@@ -1,3 +1,15 @@
+export interface BagPalette {
+  ink: string;
+  muted: string;
+  accent: string;
+  wash: string;
+  line: string;
+  ctaBg: string;
+  ctaFg: string;
+  serialIdle: string;
+  numberStroke: string;
+}
+
 export interface BagType {
   id: string;
   num: string;
@@ -9,6 +21,8 @@ export interface BagType {
   accentColor: string;
   accentHex: string;
   bgGlow: string;
+  modelSrc: string;
+  palette: BagPalette;
   specsCallouts: {
     material: string;
     printMethod: string;
@@ -43,6 +57,17 @@ export const STILL_COPY = {
     headline: "Custom bags at factory scale, for every brand.",
     description: "We engineer and produce branded carry bags for India's leading corporates — canvas totes, laminated jute shoppers, and executive gift bags — from our Mumbai and NCR facilities.",
     stats: "50,000+ bags / month · 0 middleman markup",
+    aside: {
+      kicker: "02 / Canvas tote",
+      title: "Heavyweight Canvas Tote",
+      note: "Double-stitched 10 oz cotton, cut and sewn in Mumbai and NCR.",
+      specs: [
+        { label: "Material", value: "10 oz / 340 GSM organic cotton" },
+        { label: "Print", value: "Screen or heat transfer, 6 colours" },
+        { label: "Size", value: "38 × 42 × 10 cm" },
+        { label: "MOQ", value: "100 units" },
+      ],
+    },
   },
   bagTypes: [
     {
@@ -53,9 +78,21 @@ export const STILL_COPY = {
       materialTag: "Matte Laminated Art Paper & Rope Handles",
       shortDesc: "Structured gift bag with reinforced base board, matte lamination, and cotton rope handles — built for product launches and client gifting.",
       description: "Our signature corporate gift bag features a rigid bottom insert, double rope handle attachment, and full-panel custom print. Ideal for luxury retail, hotel amenities, and boardroom presentations.",
-      accentColor: "#BCD3D8",
-      accentHex: "#BCD3D8",
-      bgGlow: "radial-blur-teal",
+      accentColor: "#E8DFD0",
+      accentHex: "#C4A574",
+      bgGlow: "radial-blur-cream",
+      modelSrc: "/models/tote-bag.glb",
+      palette: {
+        ink: "#2C2416",
+        muted: "#9A8B74",
+        accent: "#C4A574",
+        wash: "#F3EEE4",
+        line: "rgba(196, 165, 116, 0.35)",
+        ctaBg: "#3D3229",
+        ctaFg: "#F7F1E6",
+        serialIdle: "#C4B8A4",
+        numberStroke: "rgba(61, 50, 41, 0.10)",
+      },
       specsCallouts: {
         material: "300 GSM Art Paper + 2mm Grey Board Base",
         printMethod: "Offset + Spot UV / Foil Stamping",
@@ -72,9 +109,21 @@ export const STILL_COPY = {
       materialTag: "10 oz Unbleached Cotton Canvas",
       shortDesc: "Double-stitched organic cotton tote with reinforced stress points and a wide print panel for bold brand graphics.",
       description: "Engineered for trade shows, retail checkout, and employee welcome kits. Cross-box handle stitching and gusseted sides hold up to 8 kg without tearing.",
-      accentColor: "#E8C9A0",
-      accentHex: "#E8C9A0",
-      bgGlow: "radial-blur-amber",
+      accentColor: "#E8EEF4",
+      accentHex: "#7A8FA3",
+      bgGlow: "radial-blur-cloud",
+      modelSrc: "/models/white-bag.glb",
+      palette: {
+        ink: "#2A3544",
+        muted: "#8A96A6",
+        accent: "#6D8499",
+        wash: "#EEF1F4",
+        line: "rgba(109, 132, 153, 0.28)",
+        ctaBg: "#2A3544",
+        ctaFg: "#F7F9FB",
+        serialIdle: "#B7C0CA",
+        numberStroke: "rgba(42, 53, 68, 0.10)",
+      },
       specsCallouts: {
         material: "10 oz / 340 GSM Organic Cotton Canvas",
         printMethod: "Screen Print or Heat Transfer (up to 6 colours)",
@@ -91,9 +140,21 @@ export const STILL_COPY = {
       materialTag: "Natural Golden Jute with PE Lamination",
       shortDesc: "Water-resistant laminated jute shopper with padded cotton rope handles — the go-to bag for eco-conscious retail chains.",
       description: "Built for supermarket chains, export consignments, and green-brand campaigns. Laminated interior prevents moisture bleed; handles tested to 20 kg load.",
-      accentColor: "#C9B5C8",
-      accentHex: "#C9B5C8",
-      bgGlow: "radial-blur-purple",
+      accentColor: "#F3D5D8",
+      accentHex: "#C98990",
+      bgGlow: "radial-blur-blush",
+      modelSrc: "/models/pink-bag.glb",
+      palette: {
+        ink: "#5C2A2E",
+        muted: "#C4A8A9",
+        accent: "#D4787C",
+        wash: "#F6EBE8",
+        line: "rgba(212, 120, 124, 0.32)",
+        ctaBg: "#6B3034",
+        ctaFg: "#FBF6F3",
+        serialIdle: "#E0C4C2",
+        numberStroke: "rgba(107, 48, 52, 0.12)",
+      },
       specsCallouts: {
         material: "320 GSM Laminated Natural Jute / Juco Blend",
         printMethod: "Azo-Free Multi-Pass Screen Print",

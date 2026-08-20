@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const ASSETS = {
-  glb: '/models/gift-bag.glb',
+  glb: [
+    '/models/tote-bag.glb',
+    '/models/white-bag.glb',
+    '/models/pink-bag.glb',
+  ],
   images: [
     'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=75',
     'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=800&q=75',
@@ -33,7 +37,7 @@ export function useAssetPreloader() {
 
   useEffect(() => {
     let cancelled = false;
-    const totalSteps = 1 + ASSETS.images.length + 1;
+    const totalSteps = ASSETS.glb.length + ASSETS.images.length + 1;
     let completed = 0;
 
     const tick = () => {
@@ -44,8 +48,10 @@ export function useAssetPreloader() {
     };
 
     const run = async () => {
-      await preloadGlb(ASSETS.glb);
-      tick();
+      for (const src of ASSETS.glb) {
+        await preloadGlb(src);
+        tick();
+      }
 
       await Promise.all(
         ASSETS.images.map(async (src) => {

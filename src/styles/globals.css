@@ -102,9 +102,32 @@ body {
   filter: blur(8px);
 }
 
-.radial-blur-purple {
-  background: radial-gradient(circle, #c9b5c8 0%, #c9b5c8cc 20%, #c9b5c866 45%, #c9b5c81f 65%, transparent 80%);
-  filter: blur(8px);
+.radial-blur-cream {
+  background: radial-gradient(circle, #f3e4cc 0%, #ead7b8d9 18%, #ead7b866 42%, transparent 70%);
+  filter: blur(36px);
+}
+
+.radial-blur-cloud {
+  background: radial-gradient(circle, #eef3f8 0%, #d7e3eed9 18%, #c8d7e466 42%, transparent 70%);
+  filter: blur(36px);
+}
+
+.radial-blur-blush {
+  background: radial-gradient(circle, #f6d8d4 0%, #ebc2bdd9 18%, #ebc2bd66 42%, transparent 70%);
+  filter: blur(36px);
+}
+
+/* Soft oval under the categories bag — no hard disc or canvas-edge line */
+.bag-stage-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  width: 54%;
+  height: 20%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(26, 20, 16, 0.28) 0%, rgba(26, 20, 16, 0.1) 36%, transparent 70%);
+  filter: blur(32px);
+  pointer-events: none;
 }
 
 /* Hero cursor — hide system pointer inside hero */
@@ -147,27 +170,59 @@ body {
   will-change: transform, opacity;
 }
 
-/* Dark focal circle that becomes the full-screen background */
+/*
+  Focal circle that becomes the full-screen background.
+
+  Painted to match the hover lens exactly — same ink fill, same teal rim,
+  same outer glow, same inner sheen — so scaling it up reads as that sphere
+  growing rather than a second, darker disc fading in over it.
+
+  Shadow and border values are sized for the 2000px iris base: at the
+  ~800px hover-handoff scale they resolve to the lens's 2px rim and 55px
+  glow. They grow with the circle, which is the point.
+*/
 .hero-seq-iris {
   z-index: 1;
-  background: radial-gradient(
-    circle at 50% 46%,
-    #16233a 0%,
-    #0f2242 42%,
-    #0a1729 72%,
-    #081220 100%
-  );
+  background: #0f2242;
+  border: 5px solid rgba(188, 211, 216, 0.55);
+  box-sizing: border-box;
+  box-shadow:
+    0 0 0 2.5px rgba(188, 211, 216, 0.2),
+    0 0 140px rgba(188, 211, 216, 0.45),
+    0 0 280px rgba(188, 211, 216, 0.22),
+    inset 0 0 140px rgba(15, 34, 66, 0.42);
 }
 
-/* Larger, very soft, low-opacity ring around the iris */
+/* Metallic fill — same gradient as .sphere-cursor-glow. Fades as the bag
+   reveals, matching how the hover lens drops its solid fill. */
+.hero-seq-iris-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 35% 35%, #9ab5bc 0%, #4a5c64 45%, #1a2328 85%);
+  box-shadow: inset 0 2px 8px rgba(255, 255, 255, 0.6);
+}
+
+/* Specular highlight that sits on the sphere at every size. */
+.hero-seq-iris-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.14) 0%, transparent 26%);
+}
+
+/* Larger, very soft, low-opacity ring around the iris — the same teal
+   halo the hover sphere throws, scaled up with it. */
 .hero-seq-halo {
   z-index: 0;
   transform-origin: center;
   background: radial-gradient(
     circle,
-    rgba(15, 34, 66, 0.16) 0%,
-    rgba(15, 34, 66, 0.1) 46%,
-    rgba(188, 211, 216, 0.14) 62%,
+    rgba(188, 211, 216, 0.28) 0%,
+    rgba(188, 211, 216, 0.16) 42%,
+    rgba(188, 211, 216, 0.08) 58%,
     rgba(239, 237, 230, 0) 74%
   );
 }
@@ -178,27 +233,36 @@ body {
   scaled ancestor makes it re-measure against its own scaled box every frame
   and shrink toward nothing. Leaves are safe to transform.
 */
+.hero-seq-product {
+  overflow: visible;
+}
+
 .hero-seq-product canvas {
   transform: scale(var(--seq-bag-scale, 1));
   transform-origin: center center;
 }
 
-/* Static soft glow behind the product — opacity only, blur never re-computed */
+/*
+  Soft teal glow behind the bag — same language as .radial-blur-teal on the
+  hover lens. Grows with --seq-bag-scale so it rides the sphere expansion
+  instead of being swapped for a different light at the wipe.
+*/
 .hero-seq-glow {
   position: absolute;
   top: 50%;
   left: 50%;
   width: 150%;
-  height: 130%;
+  height: 150%;
   transform: translate(-50%, -50%) scale(var(--seq-bag-scale, 1));
   border-radius: 50%;
   pointer-events: none;
   background: radial-gradient(
-    ellipse at center,
-    rgba(255, 255, 255, 0.5) 0%,
-    rgba(226, 240, 244, 0.24) 28%,
-    rgba(188, 211, 216, 0.1) 48%,
-    rgba(15, 34, 66, 0) 70%
+    circle,
+    rgba(188, 211, 216, 0.85) 0%,
+    rgba(188, 211, 216, 0.45) 22%,
+    rgba(188, 211, 216, 0.18) 48%,
+    rgba(188, 211, 216, 0) 72%
   );
+  filter: blur(8px);
 }
 
